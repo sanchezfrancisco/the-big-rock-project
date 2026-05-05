@@ -12,7 +12,7 @@ from semantic_code_navigator.config import Settings
 from semantic_code_navigator.eval import run_eval, run_tuning
 from semantic_code_navigator.indexer import index_repository
 from semantic_code_navigator.metrics import append_metric, read_recent_metrics
-from semantic_code_navigator.qa import build_answer
+from semantic_code_navigator.qa import build_answer_with_language
 from semantic_code_navigator.store import IndexStore
 
 
@@ -36,6 +36,7 @@ class AskRequest(BaseModel):
     embedding_backend: str | None = None
     hybrid_keyword_weight: float | None = None
     embedding_cache_path: str | None = None
+    language: str = "en"
 
 
 class ExplainRequest(BaseModel):
@@ -45,6 +46,7 @@ class ExplainRequest(BaseModel):
     embedding_backend: str | None = None
     hybrid_keyword_weight: float | None = None
     embedding_cache_path: str | None = None
+    language: str = "en"
 
 
 class EvalRequest(BaseModel):
@@ -54,6 +56,7 @@ class EvalRequest(BaseModel):
     embedding_backend: str | None = None
     hybrid_keyword_weight: float | None = None
     embedding_cache_path: str | None = None
+    language: str = "en"
 
 
 class TuneRequest(BaseModel):
@@ -64,6 +67,7 @@ class TuneRequest(BaseModel):
     embedding_backend: str | None = None
     hybrid_keyword_weight: float | None = None
     embedding_cache_path: str | None = None
+    language: str = "en"
 
 
 class CachePruneRequest(BaseModel):
@@ -143,11 +147,11 @@ def ask(request: AskRequest) -> dict[str, object]:
     )
     store = IndexStore(settings)
     try:
-        results = store.search(request.question, top_k=request.top_k)
+        results = store.search(request.question, top_k=request.top_k, language=request.language)
         store.record_query(request.question)
     finally:
         store.close()
-    answer = build_answer(request.question, results)
+    answer = build_answer_with_language(request.question, results, language=request.language)
     append_metric(
         "ask",
         {
@@ -186,7 +190,7 @@ def explain(request: ExplainRequest) -> dict[str, object]:
     )
     store = IndexStore(settings)
     try:
-        results = store.search(request.question, top_k=request.top_k)
+        results = store.search(request.question, top_k=request.top_k, language=request.language)
     finally:
         store.close()
     payload = {
@@ -318,6 +322,7 @@ def suggest(
     embedding_backend: str | None = None,
     hybrid_keyword_weight: float | None = None,
     embedding_cache_path: str | None = None,
+    language: str = "en",
 ) -> dict[str, object]:
     if not q.strip():
         return {"items": []}
@@ -329,18 +334,26 @@ def suggest(
     )
     store = IndexStore(settings)
     try:
-        results = store.search(q, top_k=top_k)
+        results = store.search(q, top_k=top_k, language=language)
     finally:
         store.close()
     items: list[str] = []
     seen: set[str] = set()
     for result in results:
         if result.symbol:
-            candidate = f"Where is {result.symbol} implemented?"
+            candidate = (
+                f"Where is {result.symbol} implemented?"
+                if language != "es"
+                else f"Donde se implementa {result.symbol}?"
+            )
             if candidate not in seen:
                 items.append(candidate)
                 seen.add(candidate)
-        candidate = f"Explain {result.file_path}:{result.start_line}-{result.end_line}"
+        candidate = (
+            f"Explain {result.file_path}:{result.start_line}-{result.end_line}"
+            if language != "es"
+            else f"Explica {result.file_path}:{result.start_line}-{result.end_line}"
+        )
         if candidate not in seen:
             items.append(candidate)
             seen.add(candidate)

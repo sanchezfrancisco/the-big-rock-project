@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Semantic Code Navigator</title>
+  <title data-i18n="title">Semantic Code Navigator</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
@@ -11,73 +11,79 @@
   <main class="shell">
     <header class="topbar">
       <div>
-        <h1>Semantic Code Navigator</h1>
-        <p>Local-first retrieval engineering console</p>
+        <h1 data-i18n="title">Semantic Code Navigator</h1>
+        <p data-i18n="subtitle">Local-first retrieval engineering console</p>
       </div>
-      <button id="statusQuickBtn" class="btn ghost">Refresh</button>
+      <button id="statusQuickBtn" class="btn ghost" data-i18n="refresh">Refresh</button>
     </header>
 
     <section class="config card">
-      <h2>Runtime</h2>
+      <h2 data-i18n="runtime">Runtime</h2>
       <div class="form-grid">
-        <label>Index Path<input id="indexPath" value=".scn/index.sqlite3" /></label>
-        <label>Embedding Backend
+        <label data-i18n="index_path_label">Index Path<input id="indexPath" value=".scn/index.sqlite3" /></label>
+        <label data-i18n="embedding_backend_label">Embedding Backend
           <select id="embeddingBackend">
             <option value="local">local</option>
             <option value="openai">openai</option>
           </select>
         </label>
-        <label>Hybrid Weight<input id="hybridWeight" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
-        <label>Repo Path<input id="repoPath" placeholder="C:\path\to\repo" /></label>
-        <label>Eval Dataset<input id="datasetPath" value="eval/eval_dataset.real.json" /></label>
-        <label>Top K<input id="topK" type="number" min="1" max="20" value="5" /></label>
-        <label>Weights<input id="weights" value="0.20,0.35,0.55,0.70" /></label>
-        <label>Cache Max Entries<input id="cacheMax" type="number" min="0" value="2000" /></label>
+        <label data-i18n="language_label">Language
+          <select id="language">
+            <option value="en">English</option>
+            <option value="es">Espanol</option>
+          </select>
+        </label>
+        <label data-i18n="hybrid_weight_label">Hybrid Weight<input id="hybridWeight" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
+        <label data-i18n="repo_path_label">Repo Path<input id="repoPath" placeholder="C:\path\to\repo" /></label>
+        <label data-i18n="eval_dataset_label">Eval Dataset<input id="datasetPath" value="eval/eval_dataset.real.json" /></label>
+        <label data-i18n="top_k_label">Top K<input id="topK" type="number" min="1" max="20" value="5" /></label>
+        <label data-i18n="weights_label">Weights<input id="weights" value="0.20,0.35,0.55,0.70" /></label>
+        <label data-i18n="cache_max_entries_label">Cache Max Entries<input id="cacheMax" type="number" min="0" value="2000" /></label>
       </div>
     </section>
 
     <section class="actions">
       <article class="card">
-        <h3>Index</h3>
-        <button id="indexBtn" class="btn primary">Index Repository</button>
+        <h3 data-i18n="index_section">Index</h3>
+        <button id="indexBtn" class="btn primary" data-i18n="index_repository">Index Repository</button>
         <pre id="indexOut"></pre>
       </article>
       <article class="card">
-        <h3>Ask & Explain</h3>
-        <label>Question<input id="question" autocomplete="off" placeholder="Where is retrieval scoring implemented?" /></label>
+        <h3 data-i18n="ask_explain_section">Ask & Explain</h3>
+        <label data-i18n="question_label">Question<input id="question" autocomplete="off" placeholder="Where is retrieval scoring implemented?" /></label>
         <div id="suggestHint" class="hint"></div>
         <div class="row">
-          <button id="askBtn" class="btn primary">Ask</button>
-          <button id="explainBtn" class="btn subtle">Explain</button>
+          <button id="askBtn" class="btn primary" data-i18n="ask_btn">Ask</button>
+          <button id="explainBtn" class="btn subtle" data-i18n="explain_btn">Explain</button>
         </div>
         <pre id="askOut"></pre>
       </article>
       <article class="card">
-        <h3>Eval & Tune</h3>
+        <h3 data-i18n="eval_tune_section">Eval & Tune</h3>
         <div class="row">
-          <button id="evalBtn" class="btn primary">Run Eval</button>
-          <button id="tuneBtn" class="btn subtle">Run Tune</button>
+          <button id="evalBtn" class="btn primary" data-i18n="run_eval_btn">Run Eval</button>
+          <button id="tuneBtn" class="btn subtle" data-i18n="run_tune_btn">Run Tune</button>
         </div>
         <pre id="evalOut"></pre>
       </article>
       <article class="card">
-        <h3>Cache</h3>
+        <h3 data-i18n="cache_section">Cache</h3>
         <div class="row">
-          <button id="cacheStatsBtn" class="btn subtle">Cache Stats</button>
-          <button id="cachePruneBtn" class="btn danger">Prune Cache</button>
+          <button id="cacheStatsBtn" class="btn subtle" data-i18n="cache_stats_btn">Cache Stats</button>
+          <button id="cachePruneBtn" class="btn danger" data-i18n="cache_prune_btn">Prune Cache</button>
         </div>
         <pre id="cacheOut"></pre>
       </article>
     </section>
 
     <section class="card">
-      <h3>Status</h3>
+      <h3 data-i18n="status_section">Status</h3>
       <pre id="statusOut"></pre>
     </section>
     <section class="card">
-      <h3>Observability</h3>
+      <h3 data-i18n="observability_section">Observability</h3>
       <div class="row">
-        <button id="metricsBtn" class="btn subtle">Refresh Metrics</button>
+        <button id="metricsBtn" class="btn subtle" data-i18n="refresh_metrics_btn">Refresh Metrics</button>
       </div>
       <pre id="metricsOut"></pre>
     </section>
@@ -85,3 +91,4 @@
   <script src="/static/app.js"></script>
 </body>
 </html>
+

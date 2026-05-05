@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import sqlite3
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from semantic_code_navigator.embeddings import (
     embedding_model_for_backend,
 )
 from semantic_code_navigator.models import CodeChunk, SearchResult
+from semantic_code_navigator.i18n import expand_query, tokenize_text
 
 
 class IndexStore:
@@ -110,9 +110,12 @@ class IndexStore:
                         ),
                     )
 
-    def search(self, question: str, top_k: int | None = None) -> list[SearchResult]:
-        query_vector = self._embed_with_cache(question)
-        query_tokens = set(self._token_re.findall(question.lower()))
+    def search(
+        self, question: str, top_k: int | None = None, language: str = "en"
+    ) -> list[SearchResult]:
+        expanded_question = expand_query(question, language=language)
+        query_vector = self._embed_with_cache(expanded_question)
+        query_tokens = tokenize_text(expanded_question)
         rows = self.connection.execute(
             """
             SELECT code_chunks.id, source_files.path, code_chunks.start_line,
@@ -150,7 +153,7 @@ class IndexStore:
     def _keyword_overlap_score(self, query_tokens: set[str], content: str) -> float:
         if not query_tokens:
             return 0.0
-        content_tokens = set(self._token_re.findall(content.lower()))
+        content_tokens = tokenize_text(content)
         if not content_tokens:
             return 0.0
         overlap = len(query_tokens & content_tokens)
@@ -218,4 +221,3 @@ class IndexStore:
             "after_entries": after,
             "max_entries": max_entries,
         }
-    _token_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+")
