@@ -6,7 +6,12 @@ import sqlite3
 from pathlib import Path
 
 from semantic_code_navigator.config import SCHEMA_VERSION, Settings
-from semantic_code_navigator.embeddings import cosine_similarity, embed_text_with_backend
+from semantic_code_navigator.embedding_cache import EmbeddingCache
+from semantic_code_navigator.embeddings import (
+    cosine_similarity,
+    embed_text_with_backend,
+    embedding_model_for_backend,
+)
 from semantic_code_navigator.models import CodeChunk, SearchResult
 
 
@@ -17,9 +22,11 @@ class IndexStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(self.path)
         self.connection.row_factory = sqlite3.Row
+        self.embedding_cache = EmbeddingCache(settings.embedding_cache_path)
         self._migrate()
 
     def close(self) -> None:
+        self.embedding_cache.close()
         self.connection.close()
 
     def reset(self) -> None:
@@ -86,11 +93,7 @@ class IndexStore:
                 )
                 source_file_id = int(file_cursor.lastrowid)
                 for chunk in chunks:
-                    embedding = embed_text_with_backend(
-                        chunk.content,
-                        self.settings.vector_dimensions,
-                        backend=self.settings.embedding_backend,
-                    )
+                    embedding = self._embed_with_cache(chunk.content)
                     self.connection.execute(
                         """
                         INSERT INTO code_chunks(
@@ -108,11 +111,7 @@ class IndexStore:
                     )
 
     def search(self, question: str, top_k: int | None = None) -> list[SearchResult]:
-        query_vector = embed_text_with_backend(
-            question,
-            self.settings.vector_dimensions,
-            backend=self.settings.embedding_backend,
-        )
+        query_vector = self._embed_with_cache(question)
         query_tokens = set(self._token_re.findall(question.lower()))
         rows = self.connection.execute(
             """
@@ -157,6 +156,26 @@ class IndexStore:
         overlap = len(query_tokens & content_tokens)
         return overlap / len(query_tokens)
 
+    def _embed_with_cache(self, text: str) -> list[float]:
+        backend = self.settings.embedding_backend
+        model = embedding_model_for_backend(backend)
+        cached = self.embedding_cache.get(backend, model, self.settings.vector_dimensions, text)
+        if cached is not None:
+            return cached
+        embedding = embed_text_with_backend(
+            text,
+            self.settings.vector_dimensions,
+            backend=backend,
+        )
+        self.embedding_cache.put(
+            backend,
+            model,
+            self.settings.vector_dimensions,
+            text,
+            embedding,
+        )
+        return embedding
+
     def record_query(self, question: str) -> None:
         with self.connection:
             self.connection.execute("INSERT INTO queries(question) VALUES(?)", (question,))
@@ -174,5 +193,29 @@ class IndexStore:
             "files": int(file_count),
             "chunks": int(chunk_count),
             "index_path": str(self.path),
+            "embedding_cache_path": str(self.settings.embedding_cache_path),
+            "embedding_cache_entries": self.embedding_cache.entry_count(),
+            "embedding_cache_hits": self.embedding_cache.hits,
+            "embedding_cache_misses": self.embedding_cache.misses,
+        }
+
+    def cache_stats(self) -> dict[str, int | str]:
+        return {
+            "embedding_cache_path": str(self.settings.embedding_cache_path),
+            "embedding_cache_entries": self.embedding_cache.entry_count(),
+            "embedding_cache_hits": self.embedding_cache.hits,
+            "embedding_cache_misses": self.embedding_cache.misses,
+        }
+
+    def prune_cache(self, max_entries: int) -> dict[str, int | str]:
+        before = self.embedding_cache.entry_count()
+        deleted = self.embedding_cache.prune(max_entries)
+        after = self.embedding_cache.entry_count()
+        return {
+            "embedding_cache_path": str(self.settings.embedding_cache_path),
+            "before_entries": before,
+            "deleted_entries": deleted,
+            "after_entries": after,
+            "max_entries": max_entries,
         }
     _token_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+")

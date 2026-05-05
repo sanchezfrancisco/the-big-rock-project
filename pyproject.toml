@@ -15,6 +15,9 @@ dev = [
   "ruff>=0.6.0",
   "mypy>=1.10.0",
 ]
+providers = [
+  "openai>=1.45.0",
+]
 
 [project.scripts]
 scn = "semantic_code_navigator.cli:main"

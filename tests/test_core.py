@@ -85,6 +85,13 @@ def test_index_search_and_reset(tmp_path: Path) -> None:
         assert results[0].file_path == "auth.py"
         assert results[0].start_line == 1
 
+        first_hits = store.status()["embedding_cache_hits"]
+        store.search("Where is authentication handled?", top_k=3)
+        second_hits = store.status()["embedding_cache_hits"]
+        assert isinstance(first_hits, int)
+        assert isinstance(second_hits, int)
+        assert second_hits >= first_hits
+
         status = store.status()
         assert status["files"] == 1
         assert status["chunks"] >= 1

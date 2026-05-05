@@ -19,6 +19,13 @@ class EvalItemResult:
     latency_ms: float
 
 
+@dataclass(frozen=True)
+class TuneResult:
+    weight: float
+    recall_at_k: float
+    mean_latency_ms: float
+
+
 def run_eval(eval_file: Path, settings: Settings, top_k: int) -> dict[str, object]:
     payload = json.loads(eval_file.read_text(encoding="utf-8"))
     items = payload.get("items", [])
@@ -71,3 +78,55 @@ def run_eval(eval_file: Path, settings: Settings, top_k: int) -> dict[str, objec
         },
     }
 
+
+def write_report(report: dict[str, object], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+
+def run_tuning(
+    eval_file: Path,
+    base_settings: Settings,
+    top_k: int,
+    weights: list[float],
+) -> dict[str, object]:
+    candidates: list[TuneResult] = []
+    for weight in weights:
+        settings = Settings(
+            index_path=base_settings.index_path,
+            max_file_bytes=base_settings.max_file_bytes,
+            vector_dimensions=base_settings.vector_dimensions,
+            default_top_k=base_settings.default_top_k,
+            embedding_backend=base_settings.embedding_backend,
+            hybrid_keyword_weight=max(0.0, min(1.0, weight)),
+        )
+        report = run_eval(eval_file, settings, top_k=top_k)
+        summary = report["summary"]
+        candidates.append(
+            TuneResult(
+                weight=settings.hybrid_keyword_weight,
+                recall_at_k=float(summary["recall_at_k"]),
+                mean_latency_ms=float(summary["mean_latency_ms"]),
+            )
+        )
+    ranked = sorted(
+        candidates,
+        key=lambda item: (item.recall_at_k, -item.mean_latency_ms),
+        reverse=True,
+    )
+    best = ranked[0]
+    return {
+        "best": {
+            "weight": best.weight,
+            "recall_at_k": best.recall_at_k,
+            "mean_latency_ms": best.mean_latency_ms,
+        },
+        "candidates": [
+            {
+                "weight": item.weight,
+                "recall_at_k": item.recall_at_k,
+                "mean_latency_ms": item.mean_latency_ms,
+            }
+            for item in ranked
+        ],
+    }
