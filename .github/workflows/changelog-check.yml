@@ -1,0 +1,53 @@
+name: changelog-check
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate changelog unreleased block
+        id: changelog_check
+        run: |
+          set +e
+          python scripts/check_changelog.py > changelog-check-output.txt 2>&1
+          code=$?
+          cat changelog-check-output.txt
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit $code
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('changelog-check-output.txt', 'utf8');
+            const body = [
+              '## Changelog Check Failed',
+              '',
+              'The changelog automation detected missing or incomplete `Unreleased` entries.',
+              '',
+              '```text',
+              output.trim(),
+              '```',
+              '',
+              'Please update `CHANGELOG.md` under `## [Unreleased]` with the required sections.'
+            ].join('\n');
+            const issue_number = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body
+            });

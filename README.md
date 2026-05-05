@@ -1,6 +1,59 @@
 # Semantic Code Navigator
 
-Local-first CLI + API for indexing private Python repositories and asking technical questions with verifiable file/line citations.
+Local-first CLI + API + Web UI for indexing private Python repositories and asking technical questions with verifiable citations.
+
+## Product Overview
+
+Semantic Code Navigator is a local-first AI engineering toolchain for understanding private codebases without requiring SaaS deployment. The system indexes Python repositories into a local vector-ready store, supports question answering with file/line citations, explains ranking behavior for retrieval debugging, and provides quality instrumentation (evaluation, tuning, and metrics) to improve relevance over time.
+
+Primary goals:
+- Ship a practical code intelligence workflow for real repositories.
+- Keep sensitive code local by default.
+- Make retrieval quality measurable, not subjective.
+- Support iterative optimization with repeatable evaluation loops.
+
+Core capabilities:
+- Repository indexing with AST-aware chunking and secret redaction.
+- Hybrid retrieval (`vector + keyword overlap`) with score breakdown.
+- CLI, API, and polished local Web UI.
+- Embedding backend selection (`local`, `openai`) at runtime.
+- Persistent embedding cache to reduce reindex cost and latency.
+- Evaluation and tuning with report export and quality gates.
+- Operational observability through event metrics and cache telemetry.
+
+Primary use cases:
+- “Where is X implemented?” technical navigation across large repos.
+- Retrieval quality regression tracking in CI.
+- Prompt/retrieval iteration before building agentic automation.
+- Local operator console for indexing, asking, tuning, and maintenance.
+
+Non-goals (current version):
+- Multi-tenant SaaS and auth/billing.
+- Automated code modification loops.
+- Cross-language deep semantic parsing beyond Python-first scope.
+
+## Documentation Index
+
+- [Documentation Root](./docs/00-index.md)
+- [Architecture](./docs/02-architecture.md)
+- [Configuration](./docs/03-configuration.md)
+- [CLI Reference](./docs/04-cli-reference.md)
+- [API Reference](./docs/05-api-reference.md)
+- [Web UI Guide](./docs/06-web-ui-guide.md)
+- [Embedding Cache](./docs/07-embedding-cache.md)
+- [Evaluation and Tuning](./docs/08-evaluation-and-tuning.md)
+- [Security and Privacy](./docs/09-security-and-privacy.md)
+- [Operations Runbook](./docs/10-operations-runbook.md)
+- [Troubleshooting](./docs/11-troubleshooting.md)
+- [Development and Testing](./docs/12-development-and-testing.md)
+- [Roadmap](./docs/13-roadmap.md)
+- [Product Changelog](./CHANGELOG.md)
+- [Docs Changelog](./docs/changelog.md)
+- [Compatibility Matrix](./docs/compatibility-matrix.md)
+- [Versioning Policy](./docs/versioning-policy.md)
+- [Release Notes Template](./docs/release-notes-template.md)
+- [Release Checklist](./docs/release-checklist.md)
+- [Agile Learning System](./docs/agile-learning-system.md)
 
 ## Quick Start
 
@@ -24,16 +77,19 @@ uvicorn semantic_code_navigator.api:app --reload
 ```
 Open `http://127.0.0.1:8000` for the local web UI.
 
-## Privacy Defaults
+## What Stays In README
 
-- Embeddings are generated locally with a deterministic hashing model.
-- Code is not sent to external AI providers.
-- Common secrets are detected and redacted before indexing.
-- The index is stored locally in `.scn/index.sqlite3` by default.
-- Embeddings are cached locally in `.scn/embeddings_cache.sqlite3` to reduce reindex cost/latency.
-- Optional `.scnignore` patterns can exclude sensitive or noisy paths.
+- Primary local-first defaults:
+  - local embedding backend by default
+  - secret redaction before indexing
+  - `.scnignore` support
+  - local index and embedding cache persistence
+- Quality loop:
+  - `index -> ask/explain -> eval -> tune -> gate`
+- Runtime override support:
+  - backend and hybrid weight can be controlled from UI or API request body.
 
-## Commands
+## Core Commands
 
 - `scn index <repo>`: build or rebuild the local index.
 - `scn ask <question>`: retrieve relevant chunks and produce an evidence-first answer.
@@ -42,26 +98,13 @@ Open `http://127.0.0.1:8000` for the local web UI.
 - `scn reset-index`: delete the local index.
 - `scn doctor`: check runtime and SQLite health.
 - `scn eval <dataset.json>`: run recall and latency metrics against an eval set.
-- `scn eval ... --report-out reports/eval.json --min-recall 0.40`: export report and fail under quality gate.
+- `scn eval ... --report-out reports/eval.json --min-recall 0.20`: export report and fail under quality gate.
 - `scn tune ... --weights ... --report-out reports/tune.json`: pick the best hybrid keyword weight.
+- `scn cache-stats`: inspect embedding cache usage.
+- `scn cache-prune --max-entries N`: limit cache size.
 
-## Production Quality Loop
+## Optional Provider Setup
 
-- Build index: `scn index <repo>`
-- Run eval: `scn eval <dataset> --report-out reports/eval.json --min-recall <target>`
-- Inspect ranking: `scn explain "<query>" --top-k 5`
-- Track report artifacts under `reports/` for trend analysis.
-
-## Optional Provider Embeddings
-
-- Keep default: `SCN_EMBEDDING_BACKEND=local`
-- Use external provider: set `SCN_EMBEDDING_BACKEND=openai`, `OPENAI_API_KEY`, and install provider deps:
-  - `pip install -e ".[providers]"`
-
-## Agile Learning System
-
-The project is intentionally scoped for 6-8 hours/week:
-
-- WIP limit: 2 active learning tasks.
-- 20% weekly buffer for blockers or deeper practice.
-- If a concept blocks progress for more than 3 days, treat it as a black box, ship the slice, and revisit it during buffer time.
+- Install provider deps: `pip install -e ".[providers]"`
+- Set `OPENAI_API_KEY`
+- Select backend from UI runtime panel or environment variable.
