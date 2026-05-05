@@ -21,6 +21,14 @@ def embed_text(text: str, dimensions: int) -> list[float]:
     return [value / norm for value in vector]
 
 
+def embed_text_with_backend(text: str, dimensions: int, backend: str = "local") -> list[float]:
+    if backend == "local":
+        return embed_text(text, dimensions)
+    raise ValueError(
+        f"Unsupported embedding backend '{backend}'. "
+        "Use 'local' or install an external provider backend."
+    )
+
+
 def cosine_similarity(left: list[float], right: list[float]) -> float:
     return sum(a * b for a, b in zip(left, right, strict=True))
-

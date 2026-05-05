@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 
 from semantic_code_navigator.config import SCHEMA_VERSION, Settings
-from semantic_code_navigator.embeddings import cosine_similarity, embed_text
+from semantic_code_navigator.embeddings import cosine_similarity, embed_text_with_backend
 from semantic_code_navigator.models import CodeChunk, SearchResult
 
 
@@ -85,7 +86,11 @@ class IndexStore:
                 )
                 source_file_id = int(file_cursor.lastrowid)
                 for chunk in chunks:
-                    embedding = embed_text(chunk.content, self.settings.vector_dimensions)
+                    embedding = embed_text_with_backend(
+                        chunk.content,
+                        self.settings.vector_dimensions,
+                        backend=self.settings.embedding_backend,
+                    )
                     self.connection.execute(
                         """
                         INSERT INTO code_chunks(
@@ -103,7 +108,12 @@ class IndexStore:
                     )
 
     def search(self, question: str, top_k: int | None = None) -> list[SearchResult]:
-        query_vector = embed_text(question, self.settings.vector_dimensions)
+        query_vector = embed_text_with_backend(
+            question,
+            self.settings.vector_dimensions,
+            backend=self.settings.embedding_backend,
+        )
+        query_tokens = set(self._token_re.findall(question.lower()))
         rows = self.connection.execute(
             """
             SELECT code_chunks.id, source_files.path, code_chunks.start_line,
@@ -116,7 +126,12 @@ class IndexStore:
         results: list[SearchResult] = []
         for row in rows:
             vector = json.loads(row["embedding"])
-            score = cosine_similarity(query_vector, vector)
+            vector_score = cosine_similarity(query_vector, vector)
+            keyword_score = self._keyword_overlap_score(query_tokens, str(row["content"]))
+            score = (
+                (1.0 - self.settings.hybrid_keyword_weight) * vector_score
+                + self.settings.hybrid_keyword_weight * keyword_score
+            )
             results.append(
                 SearchResult(
                     chunk_id=int(row["id"]),
@@ -126,10 +141,21 @@ class IndexStore:
                     symbol=row["symbol"],
                     content=str(row["content"]),
                     score=score,
+                    vector_score=vector_score,
+                    keyword_score=keyword_score,
                 )
             )
         results.sort(key=lambda item: item.score, reverse=True)
         return results[: top_k or self.settings.default_top_k]
+
+    def _keyword_overlap_score(self, query_tokens: set[str], content: str) -> float:
+        if not query_tokens:
+            return 0.0
+        content_tokens = set(self._token_re.findall(content.lower()))
+        if not content_tokens:
+            return 0.0
+        overlap = len(query_tokens & content_tokens)
+        return overlap / len(query_tokens)
 
     def record_query(self, question: str) -> None:
         with self.connection:
@@ -149,4 +175,4 @@ class IndexStore:
             "chunks": int(chunk_count),
             "index_path": str(self.path),
         }
-
+    _token_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+")

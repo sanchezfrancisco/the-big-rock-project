@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Semantic Code Navigator</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <h1>Semantic Code Navigator</h1>
+      <p class="muted">Local-first index, QA and ranking explainability.</p>
+      <div class="grid">
+        <label>Index Path <input id="indexPath" value=".scn/index.sqlite3" /></label>
+        <label>Repo Path <input id="repoPath" placeholder="C:\path\to\repo" /></label>
+      </div>
+      <button id="indexBtn">Index Repository</button>
+      <pre id="indexOut"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>Ask</h2>
+      <div class="grid">
+        <label>Question <input id="question" placeholder="Where is auth handled?" /></label>
+        <label>Top K <input id="topK" type="number" value="5" min="1" max="20" /></label>
+      </div>
+      <div class="row">
+        <button id="askBtn">Ask</button>
+        <button id="explainBtn">Explain Ranking</button>
+      </div>
+      <pre id="askOut"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>Status</h2>
+      <button id="statusBtn">Refresh Status</button>
+      <pre id="statusOut"></pre>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
+

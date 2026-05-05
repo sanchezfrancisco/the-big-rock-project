@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "question": "Where is the CLI entrypoint implemented?",
+      "expected_files": ["src/semantic_code_navigator/cli.py"]
+    },
+    {
+      "question": "Where is retrieval search implemented?",
+      "expected_files": ["src/semantic_code_navigator/store.py"]
+    }
+  ]
+}
+

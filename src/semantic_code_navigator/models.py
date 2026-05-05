@@ -30,6 +30,8 @@ class SearchResult:
     content: str
     score: float
     symbol: str | None = None
+    vector_score: float = 0.0
+    keyword_score: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -38,4 +40,3 @@ class AnswerCitation:
     start_line: int
     end_line: int
     score: float
-

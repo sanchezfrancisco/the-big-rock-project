@@ -22,9 +22,15 @@ def chunk_python_file(source_file: SourceFile, max_lines: int = 80) -> list[Code
         and hasattr(node, "end_lineno")
     ]
 
+    import_block = _collect_import_block(lines)
+    module_docstring = _module_docstring(tree)
+
     for node in nodes:
         end_lineno = node.end_lineno or node.lineno
-        content = "\n".join(lines[node.lineno - 1 : end_lineno])
+        node_body = "\n".join(lines[node.lineno - 1 : end_lineno])
+        header_parts = [import_block, module_docstring, _node_docstring(node)]
+        header = "\n".join(part for part in header_parts if part).strip()
+        content = f"{header}\n\n{node_body}" if header else node_body
         chunks.append(
             CodeChunk(
                 file_path=source_file.relative_path,
@@ -50,6 +56,29 @@ def chunk_python_file(source_file: SourceFile, max_lines: int = 80) -> list[Code
         )
 
     return chunks or _line_chunks(source_file.relative_path, lines, max_lines)
+
+
+def _collect_import_block(lines: list[str]) -> str:
+    imports: list[str] = []
+    for line in lines[:60]:
+        stripped = line.strip()
+        if stripped.startswith("import ") or stripped.startswith("from "):
+            imports.append(line)
+    return "\n".join(imports)
+
+
+def _module_docstring(tree: ast.AST) -> str:
+    value = ast.get_docstring(tree, clean=False)
+    if not value:
+        return ""
+    return f'"""{value}"""'
+
+
+def _node_docstring(node: ast.AST) -> str:
+    value = ast.get_docstring(node, clean=False)
+    if not value:
+        return ""
+    return f'"""{value}"""'
 
 
 def _uncovered_lines(lines: list[str], ranges: set[tuple[int, int]]) -> str:
@@ -78,4 +107,3 @@ def _line_chunks(file_path: str, lines: list[str], max_lines: int) -> list[CodeC
                 )
             )
     return chunks
-
