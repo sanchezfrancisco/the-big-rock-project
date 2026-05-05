@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changelog automation script `scripts/check_changelog.py`.
 - CI workflow for changelog policy enforcement at `.github/workflows/changelog-check.yml`.
 - CI PR feedback automation that comments failures with actionable detail when changelog checks fail.
+- End-to-end language support parameter (`language`) across API operations (`ask`, `explain`, `eval`, `tune`, `suggest`).
+- New i18n module for query normalization/tokenization and Spanish query expansion to improve bilingual retrieval.
+- Full Web UI internationalization layer (`en`/`es`) with runtime language switching and scalable translation dictionary.
+- Localized suggestions and localized Ask hint text with `Tab`-accept behavior preserved across languages.
+- Enhanced answer synthesis for practical product usage:
+  - direct capability-style response for payment-related questions
+  - provider detection heuristics (for known gateways)
+  - evidence-derived flow summary to explain implementation path
 
 ### Changed
 
@@ -33,18 +41,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Unreleased` must contain meaningful entries when relevant files change.
   - Required changelog sections are validated based on changed file categories.
 - Changelog validator made repository-root aware to work reliably across CI/local execution contexts.
+- Search pipeline updated to language-aware query processing in `IndexStore.search`.
+- Ask response behavior upgraded from citation-only summary to richer response shape (direct answer + flow suggestion + evidence summary).
+- Web UI runtime controls expanded with language selector and dynamic interface text translation.
 
 ### Fixed
 
 - Corrected Product Overview quote formatting in README to plain ASCII-safe quoting.
 - Resolved changelog validator path-resolution issue that could fail when script ran outside repo cwd.
 - Improved changelog automation diagnostics to make CI failures explicit and actionable for contributors.
+- Resolved UI text encoding inconsistencies by normalizing language labels/content to ASCII-safe forms.
 
 ### Security
 
 - Strengthened governance controls by enforcing mandatory change documentation before merge via CI.
 - Reduced release-process risk by requiring explicit `Unreleased` entries for relevant code/docs/config changes.
 - Maintained explicit opt-in posture for external embedding providers through documented release and policy artifacts.
+- Preserved local-first privacy defaults while adding multilingual support, without introducing outbound data flow by default.
 
 ## [0.1.0] - 2026-05-05
 
